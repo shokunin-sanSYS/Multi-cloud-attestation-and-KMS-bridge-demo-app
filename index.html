@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>統合アテステーション&KMSブリッジ - Enterprise Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0e1a;
+            color: #e4e6eb;
+            overflow-x: hidden;
+        }
+
+        /* タイトルバナー */
+        #title-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a2332 0%, #0a0e1a 50%, #1a1f2e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeOut 2.5s forwards;
+        }
+
+        @keyframes fadeOut {
+            0%, 85% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                pointer-events: none;
+            }
+        }
+
+        #title-banner h1 {
+            font-size: 3.5rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099ff 50%, #0066ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: slideIn 1s ease-out;
+        }
+
+        #title-banner p {
+            font-size: 1.3rem;
+            color: #8b95a8;
+            letter-spacing: 0.1em;
+            animation: slideIn 1s ease-out 0.3s backwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ヘッダー */
+        header {
+            background: linear-gradient(135deg, #1a2332 0%, #0f1419 100%);
+            border-bottom: 1px solid #2a3441;
+            padding: 0 2rem;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        nav {
+            display: flex;
+            gap: 2rem;
+        }
+
+        nav a {
+            color: #8b95a8;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+
+        nav a:hover, nav a.active {
+            color: #00d4ff;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* メインコンテナ */
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeInPage 0.5s;
+        }
+
+        @keyframes fadeInPage {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 統計カード */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1a2332 0%, #0f1722 100%);
+            border: 1px solid #2a3441;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: #0099ff;
+            box-shadow: 0 8px 30px rgba(0, 153, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #8b95a8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-trend {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .stat-trend.up {
+            background: rgba(0, 255, 136, 0.15);
+            color: #00ff88;
+        }
+
+        .stat-trend.down {
+            background: rgba(255, 77, 77, 0.15);
+            color: #ff4d4d;
+        }
+
+        .stat-trend.stable {
+            background: rgba(0, 153, 255, 0.15);
+            color: #0099ff;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #ffffff, #b3c5d7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-subtext {
+            font-size: 0.8rem;
+            color: #6b7788;
+        }
+
+        /* アラートバナー */
+        .alert-banner {
+            background: linear-gradient(135deg, #ff4d4d20 0%, #ff1a1a20 100%);
+            border: 1px solid #ff4d4d;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: alertPulse 2s infinite;
+        }
+
+        @keyframes alertPulse {
+            0%, 100% { border-color: #ff4d4d; }
+            50% { border-color: #ff8888; }
+        }
+
+        .alert-icon {
+            width: 24px;
+            height: 24px;
+            background: #ff4d4d;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* ダッシュボードグリッド */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .panel {
+            background: linear-gradient(135deg, #1a2332 0%, #0f1722 100%);
+            border: 1px solid #2a3441;
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #2a3441;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e4e6eb;
+        }
+
+        .panel-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: 1px solid #2a3441;
+            background: #1a2332;
+            color: #8b95a8;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #0099ff;
+            border-color: #0099ff;
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0099ff, #0066ff);
+            border-color: #0099ff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 15px rgba(0, 153, 255, 0.4);
+        }
+
+        /* テーブル */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #0f1419;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #8b95a8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 1rem;
+            border-top: 1px solid #2a3441;
+            font-size: 0.9rem;
+        }
+
+        tbody tr {
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #1a2332;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.35rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-success {
+            background: rgba(0, 255, 136, 0.15);
+            color: #00ff88;
+        }
+
+        .status-warning {
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+        }
+
+        .status-error {
+            background: rgba(255, 77, 77, 0.15);
+            color: #ff4d4d;
+        }
+
+        .status-info {
+            background: rgba(0, 153, 255, 0.15);
+            color: #0099ff;
+        }
+
+        /* チャート */
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+
+        canvas {
+            max-height: 100%;
+        }
+
+        /* グリッドサイズ */
+        .col-6 { grid-column: span 6; }
+        .col-8 { grid-column: span 8; }
+        .col-12 { grid-column: span 12; }
+
+        /* プログレスバー */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #1a2332;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00d4ff);
+            border-radius: 4px;
+            transition: width 1s ease-out;
+        }
+
+        /* メトリクスリスト */
+        .metrics-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #2a3441;
+        }
+
+        .metric-item:last-child {
+            border-bottom: none;
+        }
+
+        .metric-name {
+            font-size: 0.9rem;
+            color: #8b95a8;
+        }
+
+        .metric-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e4e6eb;
+        }
+
+        /* レポート生成 */
+        .report-section {
+            margin-top: 2rem;
+        }
+
+        .report-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .report-option {
+            background: #1a2332;
+            border: 1px solid #2a3441;
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .report-option:hover {
+            border-color: #0099ff;
+            background: #1f2a3d;
+        }
+
+        .report-option.selected {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: #1a2332;
+            border: 1px solid #2a3441;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #8b95a8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #ff4d4d;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .col-6, .col-8, .col-12 {
+                grid-column: span 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                height: auto;
+                padding: 1rem;
+            }
+            nav {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+            #title-banner h1 {
+                font-size: 2rem;
+            }
+            #title-banner p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- タイトルバナー -->
+    <div id="title-banner">
+        <h1>統合アテステーション&KMSブリッジ</h1>
+        <p>MULTI-CLOUD SECURITY & COMPLIANCE PLATFORM</p>
+    </div>
+
+    <!-- ヘッダー -->
+    <header>
+        <div class="logo">ATTESTATION & KMS BRIDGE</div>
+        <nav>
+            <a href="#" class="nav-link active" data-page="dashboard">ダッシュボード</a>
+            <a href="#" class="nav-link" data-page="attestation">アテステーション</a>
+            <a href="#" class="nav-link" data-page="kms">KMS管理</a>
+            <a href="#" class="nav-link" data-page="compliance">コンプライアンス</a>
+            <a href="#" class="nav-link" data-page="reports">レポート</a>
+        </nav>
+        <div class="user-info">
+            <div class="status-indicator"></div>
+            <span>System Administrator</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- ダッシュボードページ -->
+        <div id="dashboard" class="page active">
+            <!-- アラートバナー -->
+            <div class="alert-banner" id="alert-banner" style="display: none;">
+                <div class="alert-icon"></div>
+                <div>
+                    <strong>警告:</strong> <span id="alert-text"></span>
+                </div>
+            </div>
+
+            <!-- 統計カード -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">アテステーション成功率</span>
+                        <span class="stat-trend up" id="attestation-trend">+0.2%</span>
+                    </div>
+                    <div class="stat-value" id="attestation-rate">99.3%</div>
+                    <div class="stat-subtext">目標: ≥99.0% | 過去24時間</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="attestation-progress" style="width: 99.3%"></div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">アクティブノード</span>
+                        <span class="stat-trend stable">安定</span>
+                    </div>
+                    <div class="stat-value" id="active-nodes">847</div>
+                    <div class="stat-subtext">AWS 412 | Azure 298 | GCP 137</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">鍵管理トランザクション</span>
+                        <span class="stat-trend up" id="kms-trend">+12%</span>
+                    </div>
+                    <div class="stat-value" id="kms-transactions">24,583</div>
+                    <div class="stat-subtext">過去1時間 | 平均レイテンシ: 45ms</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">コンプライアンススコア</span>
+                        <span class="stat-trend up">+3pts</span>
+                    </div>
+                    <div class="stat-value">98/100</div>
+                    <div class="stat-subtext">GDPR, APPI, ISO27001準拠</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 98%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ダッシュボードグリッド -->
+            <div class="dashboard-grid">
+                <!-- リアルタイムアテステーション -->
+                <div class="panel col-8">
+                    <div class="panel-header">
+                        <h3 class="panel-title">リアルタイムアテステーション監視</h3>
+                        <div class="panel-actions">
+                            <button class="btn">1H</button>
+                            <button class="btn">6H</button>
+                            <button class="btn">24H</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="attestationChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- クラウドプロバイダー分布 -->
+                <div class="panel col-4">
+                    <div class="panel-header">
+                        <h3 class="panel-title">クラウドプロバイダー分布</h3>
+                    </div>
+                    <div class="metrics-list">
+                        <div class="metric-item">
+                            <span class="metric-name">AWS (TDX)</span>
+                            <span class="metric-value" id="aws-count">412</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">Azure (SEV-SNP)</span>
+                            <span class="metric-value" id="azure-count">298</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">GCP (CCA)</span>
+                            <span class="metric-value" id="gcp-count">137</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">オンプレミス</span>
+                            <span class="metric-value">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近のアテステーション -->
+                <div class="panel col-12">
+                    <div class="panel-header">
+                        <h3 class="panel-title">最近のアテステーション検証</h3>
+                        <button class="btn btn-primary">すべて表示</button>
+                    </div>
+                    <table id="attestation-table">
+                        <thead>
+                            <tr>
+                                <th>タイムスタンプ</th>
+                                <th>ノードID</th>
+                                <th>プロバイダー</th>
+                                <th>TEEタイプ</th>
+                                <th>ステータス</th>
+                                <th>レイテンシ</th>
+                                <th>ポリシー</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attestation-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- アテステーションページ -->
+        <div id="attestation" class="page">
+            <h2 style="margin-bottom: 2rem; font-size: 1.8rem;">アテステーション検証管理</h2>
+            
+            <div class="dashboard-grid">
+                <div class="panel col-6">
+                    <div class="panel-header">
+                        <h3 class="panel-title">TEEタイプ別検証状況</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="teeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="panel col-6">
+                    <div class="panel-header">
+                        <h3 class="panel-title">検証失敗の理由分析</h3>
+                    </div>
+                    <div class="metrics-list">
+                        <div class="metric-item">
+                            <span class="metric-name">ポリシー不一致</span>
+                            <span class="metric-value">8件</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">証明書期限切れ</span>
+                            <span class="metric-value">3件</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">測定値不正</span>
+                            <span class="metric-value">2件</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">タイムアウト</span>
+                            <span class="metric-value">1件</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel col-12">
+                    <div class="panel-header">
+                        <h3 class="panel-title">ポリシー設定</h3>
+                        <button class="btn btn-primary" onclick="alert('ポリシー編集機能（デモ）')">新規ポリシー作成</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ポリシー名</th>
+                                <th>適用範囲</th>
+                                <th>セキュリティレベル</th>
+                                <th>最終更新</th>
+                                <th>ステータス</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Production-High-Security</td>
+                                <td>全プロダクション環境</td>
+                                <td><span class="status-badge status-error">Critical</span></td>
+                                <td>2025-11-07 09:23</td>
+                                <td><span class="status-badge status-success">有効</span></td>
+                            </tr>
+                            <tr>
+                                <td>Development-Standard</td>
+                                <td>開発環境</td>
+                                <td><span class="status-badge status-warning">Medium</span></td>
+                                <td>2025-11-05 14:45</td>
+                                <td><span class="status-badge status-success">有効</span></td>
+                            </tr>
+                            <tr>
+                                <td>Financial-Compliance</td>
+                                <td>金融データ処理</td>
+                                <td><span class="status-badge status-error">Critical</span></td>
+                                <td>2025-11-06 11:12</td>
+                                <td><span class="status-badge status-success">有効</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- KMS管理ページ -->
+        <div id="kms" class="page">
+            <h2 style="margin-bottom: 2rem; font-size: 1.8rem;">KMS統合管理</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">アクティブ鍵</span>
+                        <span class="stat-trend up">+15</span>
+                    </div>
+                    <div class="stat-value">1,247</div>
+                    <div class="stat-subtext">BYOK: 823 | HYOK: 424</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">鍵ローテーション</span>
+                        <span class="stat-trend stable">正常</span>
+                    </div>
+                    <div class="stat-value">98.7%</div>
+                    <div class="stat-subtext">過去30日間の成功率</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">暗号化操作/秒</span>
+                        <span class="stat-trend up" id="crypto-ops-trend">+8%</span>
+                    </div>
+                    <div class="stat-value" id="crypto-ops">3,421</div>
+                    <div class="stat-subtext">平均レイテンシ: 42ms</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">HSM接続数</span>
+                        <span class="stat-trend stable">安定</span>
+                    </div>
+                    <div class="stat-value">24</div>
+                    <div class="stat-subtext">すべて正常稼働中</div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="panel col-8">
+                    <div class="panel-header">
+                        <h3 class="panel-title">鍵使用量トレンド</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="kmsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="panel col-4">
+                    <div class="panel-header">
+                        <h3 class="panel-title">鍵タイプ分布</h3>
+                    </div>
+                    <div class="metrics-list">
+                        <div class="metric-item">
+                            <span class="metric-name">AES-256</span>
+                            <span class="metric-value">687</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">RSA-4096</span>
+                            <span class="metric-value">342</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">ECDSA-P256</span>
+                            <span class="metric-value">218</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- コンプライアンスページ -->
+        <div id="compliance" class="page">
+            <h2 style="margin-bottom: 2rem; font-size: 1.8rem;">コンプライアンス監査</h2>
+            
+            <div class="dashboard-grid">
+                <div class="panel col-12">
+                    <div class="panel-header">
+                        <h3 class="panel-title">規制準拠ステータス</h3>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>規制名</th>
+                                <th>準拠スコア</th>
+                                <th>必須要件</th>
+                                <th>達成要件</th>
+                                <th>最終監査</th>
+                                <th>ステータス</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>GDPR</td>
+                                <td>98%</td>
+                                <td>127</td>
+                                <td>125</td>
+                                <td>2025-11-01</td>
+                                <td><span class="status-badge status-success">準拠</span></td>
+                            </tr>
+                            <tr>
+                                <td>APPI (日本)</td>
+                                <td>100%</td>
+                                <td>89</td>
+                                <td>89</td>
+                                <td>2025-10-28</td>
+                                <td><span class="status-badge status-success">準拠</span></td>
+                            </tr>
+                            <tr>
+                                <td>EU Data Act</td>
+                                <td>95%</td>
+                                <td>64</td>
+                                <td>61</td>
+                                <td>2025-11-03</td>
+                                <td><span class="status-badge status-warning">対応中</span></td>
+                            </tr>
+                            <tr>
+                                <td>ISO 27001</td>
+                                <td>99%</td>
+                                <td>114</td>
+                                <td>113</td>
+                                <td>2025-10-15</td>
+                                <td><span class="status-badge status-success">認証済</span></td>
+                            </tr>
+                            <tr>
+                                <td>SOC 2 Type II</td>
+                                <td>97%</td>
+                                <td>76</td>
+                                <td>74</td>
+                                <td>2025-09-20</td>
+                                <td><span class="status-badge status-success">認証済</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="panel col-6">
+                    <div class="panel-header">
+                        <h3 class="panel-title">監査証跡件数（24時間）</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="auditChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="panel col-6">
+                    <div class="panel-header">
+                        <h3 class="panel-title">コンプライアンスアラート</h3>
+                    </div>
+                    <div class="metrics-list">
+                        <div class="metric-item">
+                            <span class="metric-name">要対応</span>
+                            <span class="metric-value" style="color: #ff4d4d;">3件</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">警告</span>
+                            <span class="metric-value" style="color: #ffc107;">7件</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">情報</span>
+                            <span class="metric-value" style="color: #0099ff;">12件</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-name">解決済</span>
+                            <span class="metric-value" style="color: #00ff88;">1,247件</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- レポートページ -->
+        <div id="reports" class="page">
+            <h2 style="margin-bottom: 2rem; font-size: 1.8rem;">レポート生成</h2>
+            
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">レポートタイプを選択</h3>
+                </div>
+                <div class="report-options">
+                    <div class="report-option" data-report="security">
+                        <h4>セキュリティ監査レポート</h4>
+                        <p style="color: #8b95a8; font-size: 0.85rem; margin-top: 0.5rem;">
+                            アテステーション履歴、セキュリティイベント、脆弱性評価
+                        </p>
+                    </div>
+                    <div class="report-option" data-report="compliance">
+                        <h4>コンプライアンスレポート</h4>
+                        <p style="color: #8b95a8; font-size: 0.85rem; margin-top: 0.5rem;">
+                            規制準拠状況、監査証跡、認証ステータス
+                        </p>
+                    </div>
+                    <div class="report-option" data-report="performance">
+                        <h4>パフォーマンスレポート</h4>
+                        <p style="color: #8b95a8; font-size: 0.85rem; margin-top: 0.5rem;">
+                            システムメトリクス、レイテンシ分析、リソース使用率
+                        </p>
+                    </div>
+                    <div class="report-option" data-report="executive">
+                        <h4>エグゼクティブサマリー</h4>
+                        <p style="color: #8b95a8; font-size: 0.85rem; margin-top: 0.5rem;">
+                            経営層向け総合レポート、KPI、ROI分析
+                        </p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <h4 style="margin-bottom: 1rem;">期間設定</h4>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <button class="btn">過去7日間</button>
+                        <button class="btn">過去30日間</button>
+                        <button class="btn">過去90日間</button>
+                        <button class="btn">カスタム期間</button>
+                    </div>
+                    <button class="btn btn-primary" onclick="generateReport()" style="margin-top: 1rem; padding: 0.75rem 2rem;">
+                        レポート生成
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel" style="margin-top: 2rem;">
+                <div class="panel-header">
+                    <h3 class="panel-title">最近生成されたレポート</h3>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>レポート名</th>
+                            <th>タイプ</th>
+                            <th>生成日時</th>
+                            <th>期間</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>月次セキュリティ監査_2025-10</td>
+                            <td>セキュリティ監査</td>
+                            <td>2025-11-01 10:30</td>
+                            <td>2025-10-01 - 2025-10-31</td>
+                            <td><button class="btn" onclick="downloadReport('security')">ダウンロード</button></td>
+                        </tr>
+                        <tr>
+                            <td>Q3コンプライアンス報告</td>
+                            <td>コンプライアンス</td>
+                            <td>2025-10-05 14:15</td>
+                            <td>2025-07-01 - 2025-09-30</td>
+                            <td><button class="btn" onclick="downloadReport('compliance')">ダウンロード</button></td>
+                        </tr>
+                        <tr>
+                            <td>週次パフォーマンス分析</td>
+                            <td>パフォーマンス</td>
+                            <td>2025-11-07 09:00</td>
+                            <td>2025-10-31 - 2025-11-06</td>
+                            <td><button class="btn" onclick="downloadReport('performance')">ダウンロード</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- レポート生成モーダル -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">レポート生成中</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div>
+                <p style="margin-bottom: 1.5rem; color: #8b95a8;">
+                    レポートを生成しています。完了までお待ちください。
+                </p>
+                <div class="progress-bar" style="height: 12px;">
+                    <div class="progress-fill" id="reportProgress" style="width: 0%"></div>
+                </div>
+                <p id="reportStatus" style="margin-top: 1rem; font-size: 0.9rem; color: #8b95a8;">
+                    データ収集中...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // ページ切り替え
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = e.target.dataset.page;
+                
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById(page).classList.add('active');
+            });
+        });
+
+        // リアルタイムデータ更新
+        let attestationRate = 99.3;
+        let activeNodes = 847;
+        let kmsTransactions = 24583;
+        let awsCount = 412;
+        let azureCount = 298;
+        let gcpCount = 137;
+        let cryptoOps = 3421;
+
+        function updateMetrics() {
+            // アテステーション成功率の変動
+            attestationRate += (Math.random() - 0.5) * 0.1;
+            attestationRate = Math.max(98.5, Math.min(99.9, attestationRate));
+            document.getElementById('attestation-rate').textContent = attestationRate.toFixed(1) + '%';
+            document.getElementById('attestation-progress').style.width = attestationRate + '%';
+
+            // アクティブノード数の変動
+            activeNodes += Math.floor((Math.random() - 0.5) * 10);
+            activeNodes = Math.max(800, Math.min(900, activeNodes));
+            document.getElementById('active-nodes').textContent = activeNodes.toLocaleString();
+
+            // クラウドプロバイダー数の更新
+            awsCount += Math.floor((Math.random() - 0.5) * 5);
+            azureCount += Math.floor((Math.random() - 0.5) * 5);
+            gcpCount += Math.floor((Math.random() - 0.5) * 3);
+            document.getElementById('aws-count').textContent = awsCount;
+            document.getElementById('azure-count').textContent = azureCount;
+            document.getElementById('gcp-count').textContent = gcpCount;
+
+            // KMSトランザクション
+            kmsTransactions += Math.floor(Math.random() * 200 + 50);
+            document.getElementById('kms-transactions').textContent = kmsTransactions.toLocaleString();
+
+            // 暗号化操作
+            cryptoOps += Math.floor((Math.random() - 0.5) * 200);
+            cryptoOps = Math.max(3000, Math.min(4000, cryptoOps));
+            document.getElementById('crypto-ops').textContent = cryptoOps.toLocaleString();
+
+            // ランダムアラート表示
+            if (Math.random() < 0.05 && attestationRate < 99.0) {
+                showAlert('一部のノードでアテステーション失敗が検出されました');
+            }
+        }
+
+        function showAlert(message) {
+            const banner = document.getElementById('alert-banner');
+            const text = document.getElementById('alert-text');
+            text.textContent = message;
+            banner.style.display = 'flex';
+            
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 5000);
+        }
+
+        // アテステーションテーブル更新
+        const providers = ['AWS', 'Azure', 'GCP'];
+        const teeTypes = ['TDX', 'SEV-SNP', 'CCA'];
+        const statuses = ['success', 'success', 'success', 'success', 'warning', 'error'];
+        const policies = ['Production-High-Security', 'Development-Standard', 'Financial-Compliance'];
+
+        function addAttestationRow() {
+            const tbody = document.getElementById('attestation-tbody');
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString('ja-JP', { hour12: false });
+            
+            const provider = providers[Math.floor(Math.random() * providers.length)];
+            const teeType = teeTypes[Math.floor(Math.random() * teeTypes.length)];
+            const status = statuses[Math.floor(Math.random() * statuses.length)];
+            const policy = policies[Math.floor(Math.random() * policies.length)];
+            const latency = Math.floor(Math.random() * 80 + 20);
+            const nodeId = 'node-' + Math.random().toString(36).substr(2, 8);
+
+            const statusClass = status === 'success' ? 'status-success' : 
+                              status === 'warning' ? 'status-warning' : 'status-error';
+            const statusText = status === 'success' ? '成功' : 
+                             status === 'warning' ? '警告' : '失敗';
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${timestamp}</td>
+                <td>${nodeId}</td>
+                <td>${provider}</td>
+                <td>${teeType}</td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                <td>${latency}ms</td>
+                <td>${policy}</td>
+            `;
+
+            tbody.insertBefore(row, tbody.firstChild);
+
+            // 最大10行に制限
+            while (tbody.children.length > 10) {
+                tbody.removeChild(tbody.lastChild);
+            }
+        }
+
+        // チャート設定
+        const chartColors = {
+            primary: '#0099ff',
+            success: '#00ff88',
+            warning: '#ffc107',
+            error: '#ff4d4d',
+            info: '#00d4ff'
+        };
+
+        // アテステーションチャート
+        const attestationCtx = document.getElementById('attestationChart').getContext('2d');
+        const attestationData = {
+            labels: [],
+            datasets: [{
+                label: '成功',
+                data: [],
+                borderColor: chartColors.success,
+                backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                tension: 0.4
+            }, {
+                label: '失敗',
+                data: [],
+                borderColor: chartColors.error,
+                backgroundColor: 'rgba(255, 77, 77, 0.1)',
+                tension: 0.4
+            }]
+        };
+
+        const attestationChart = new Chart(attestationCtx, {
+            type: 'line',
+            data: attestationData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#8b95a8' }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#8b95a8' },
+                        grid: { color: '#2a3441' }
+                    },
+                    y: {
+                        ticks: { color: '#8b95a8' },
+                        grid: { color: '#2a3441' }
+                    }
+                }
+            }
+        });
+
+        function updateAttestationChart() {
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+            attestationData.labels.push(timeLabel);
+            attestationData.datasets[0].data.push(Math.floor(Math.random() * 50 + 920));
+            attestationData.datasets[1].data.push(Math.floor(Math.random() * 10 + 2));
+
+            if (attestationData.labels.length > 20) {
+                attestationData.labels.shift();
+                attestationData.datasets[0].data.shift();
+                attestationData.datasets[1].data.shift();
+            }
+
+            attestationChart.update();
+        }
+
+        // TEEチャート
+        const teeCtx = document.getElementById('teeChart').getContext('2d');
+        const teeChart = new Chart(teeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['TDX (AWS)', 'SEV-SNP (Azure)', 'CCA (GCP)'],
+                datasets: [{
+                    data: [412, 298, 137],
+                    backgroundColor: [chartColors.primary, chartColors.success, chartColors.warning]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#8b95a8' }
+                    }
+                }
+            }
+        });
+
+        // KMSチャート
+        const kmsCtx = document.getElementById('kmsChart').getContext('2d');
+        const kmsChart = new Chart(kmsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['暗号化', '復号化', 'キー生成', 'ローテーション', '署名', '検証'],
+                datasets: [{
+                    label: '操作回数',
+                    data: [8500, 7200, 420, 180, 3200, 3100],
+                    backgroundColor: chartColors.primary
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#8b95a8' },
+                        grid: { color: '#2a3441' }
+                    },
+                    y: {
+                        ticks: { color: '#8b95a8' },
+                        grid: { color: '#2a3441' }
+                    }
+                }
+            }
+        });
+
+        // 監査証跡チャート
+        const auditCtx = document.getElementById('auditChart').getContext('2d');
+        const auditChart = new Chart(auditCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                datasets: [{
+                    label: '監査イベント',
+                    data: Array.from({length: 24}, () => Math.floor(Math.random() * 500 + 300)),
+                    borderColor: chartColors.info,
+                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#8b95a8' },
+                        grid: { color: '#2a3441' }
+                    },
+                    y: {
+                        ticks: { color: '#8b95a8' },
+                        grid: { color: '#2a3441' }
+                    }
+                }
+            }
+        });
+
+        // レポートオプション選択
+        document.querySelectorAll('.report-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.report-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+            });
+        });
+
+        // レポート生成
+        function generateReport() {
+            const selected = document.querySelector('.report-option.selected');
+            if (!selected) {
+                alert('レポートタイプを選択してください');
+                return;
+            }
+
+            const modal = document.getElementById('reportModal');
+            const progress = document.getElementById('reportProgress');
+            const status = document.getElementById('reportStatus');
+            
+            modal.classList.add('show');
+            
+            let currentProgress = 0;
+            const steps = [
+                'データ収集中...',
+                'アテステーション履歴を分析中...',
+                'コンプライアンスチェック実行中...',
+                'レポート生成中...',
+                '完了'
+            ];
+            
+            const interval = setInterval(() => {
+                currentProgress += 20;
+                progress.style.width = currentProgress + '%';
+                
+                const stepIndex = Math.min(Math.floor(currentProgress / 20), steps.length - 1);
+                status.textContent = steps[stepIndex];
+                
+                if (currentProgress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        modal.classList.remove('show');
+                        alert('レポートが生成されました（デモ機能）');
+                        progress.style.width = '0%';
+                    }, 1000);
+                }
+            }, 800);
+        }
+
+        function downloadReport(type) {
+            // デモ用のダウンロード機能
+            const reportData = {
+                security: {
+                    title: 'セキュリティ監査レポート',
+                    sections: [
+                        'アテステーション成功率: 99.3%',
+                        '検出された脆弱性: 0件',
+                        'セキュリティイベント: 247件',
+                        '対応完了率: 100%'
+                    ]
+                },
+                compliance: {
+                    title: 'コンプライアンスレポート',
+                    sections: [
+                        'GDPR準拠: 98%',
+                        'APPI準拠: 100%',
+                        'ISO27001認証: 有効',
+                        '監査証跡: 完全'
+                    ]
+                },
+                performance: {
+                    title: 'パフォーマンスレポート',
+                    sections: [
+                        '平均レイテンシ: 45ms',
+                        'スループット: 3,421 ops/s',
+                        '稼働率: 99.97%',
+                        'リソース使用率: 最適'
+                    ]
+                }
+            };
+
+            const report = reportData[type];
+            const content = `
+${report.title}
+================================
+
+生成日時: ${new Date().toLocaleString('ja-JP')}
+
+${report.sections.join('\n')}
+
+このレポートはデモ用に生成されました。
+実際の環境では詳細なデータと分析結果が含まれます。
+            `.trim();
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${type}_report_${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function closeModal() {
+            document.getElementById('reportModal').classList.remove('show');
+        }
+
+        // 初期化
+        setInterval(updateMetrics, 3000);
+        setInterval(addAttestationRow, 4000);
+        setInterval(updateAttestationChart, 5000);
+
+        // 初期データ投入
+        for (let i = 0; i < 5; i++) {
+            addAttestationRow();
+        }
+        for (let i = 0; i < 10; i++) {
+            updateAttestationChart();
+        }
+    </script>
+</body>
+</html>
